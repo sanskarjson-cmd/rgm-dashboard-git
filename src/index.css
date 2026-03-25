@@ -1,0 +1,50 @@
+@font-face {
+  font-family: 'MarsBold';
+  src: url('./Fonts/Fonts/MarsCentra-Bold.ttf') format('truetype');
+  font-weight: 700;
+}
+@font-face {
+  font-family: 'MarsExtrabold';
+  src: url('./Fonts/Fonts/MarsCentra-Extrabold.ttf') format('truetype');
+  font-weight: 800;
+}
+@font-face {
+  font-family: 'MarsCentra-Book';
+  src: url('./Fonts/Fonts/MarsCentra-Book.ttf') format('truetype');
+  font-weight: 400;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'MarsCentra-Book', 'Segoe UI', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background: #f0f2f8;
+  color: #1a1a2e;
+}
+
+button { font-family: inherit; }
+input  { font-family: inherit; }
+
+::-webkit-scrollbar       { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #8080cf; border-radius: 4px; }
+
+@keyframes spin    { to { transform: rotate(360deg); } }
+@keyframes shimmer { 0%{transform:translateX(-100%)} 100%{transform:translateX(100%)} }
+@keyframes fadeUp   { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+/* Modal: starts centered but small+faded, expands to full — no corner pop */
+/* Modal pop-in: only animates opacity + scale, transform stays static in element style */
+@keyframes modalIn  {
+  0%   { opacity:0;   scale:0.90; }
+  65%  { opacity:1;   scale:1.02; }
+  100% { opacity:1;   scale:1;    }
+}
+@keyframes pulse   { 0%,100%{opacity:.3;transform:scale(.75)} 50%{opacity:1;transform:scale(1)} }
+@keyframes glow    { 0%,100%{box-shadow:0 0 0 0 rgba(0,0,160,.0)} 50%{box-shadow:0 0 12px 2px rgba(0,0,160,.15)} }
