@@ -24,36 +24,70 @@ export const REGIONS   = Object.keys(REGION_MARKET_MAP);
 export const YEARS     = [2025,2026,2027];
 export const RETAILERS = ["All Retailers","Retailer X","Retailer Y","Retailer Z"];
 
-// ─── CATEGORY → SUB-CATEGORY → SKU ───────────────────────────────────────────
+// ─── CATEGORY → SUB-CATEGORY → SKU (Mars real portfolio) ────────────────────
 export const CATEGORY_TREE = {
-  "Chocolate": {
-    "Bars":      ["Snickers 50g","Twix 50g","Milky Way 26g","Galaxy 42g"],
-    "Multipacks":["Snickers Multipack 4x50g","M&Ms Peanut 200g","M&Ms Chocolate 200g"],
-    "Sharing":   ["Celebrations 196g","Quality Street 220g"],
+  "Confectionery": {
+    "Chocolate": [
+      "Snickers 50g","Snickers King Size 75g","Bounty 57g","Galaxy Smooth Milk 110g",
+      "Twix 50g","Mars Bar 51g","Dove Milk Chocolate 100g","M&Ms Chocolate 200g",
+      "M&Ms Peanut 200g","Milkyway 26g","3 Musketeers 55g",
+    ],
+    "Gum": [
+      "Extra Peppermint 10pc","Extra Spearmint 10pc","Orbit Peppermint 14pc",
+      "Orbit Spearmint 14pc","Five Spearmint 15pc","Airwaves Menthol 14pc",
+    ],
+    "Fruity Confections": [
+      "Skittles Original 45g","Skittles Wild Berry 45g","Starburst Original 45g",
+      "Starburst Tropical 45g","Sugus Assorted 135g","Big Time Assorted 100g",
+    ],
+    "Mints": [
+      "Aquadrops Berry 18g","Aquadrops Mint 18g",
+      "Rondo Peppermint 30pc","Extra Refreshers Bubblemint 67g",
+    ],
+    "Spreads": [
+      "Dove Galaxy Smooth Spread 200g","Snickers Spread 320g",
+    ],
   },
-  "Pet Care": {
-    "Dog Food":  ["Pedigree Adult 400g","Pedigree Puppy 400g"],
-    "Cat Food":  ["Whiskas Adult 400g","Whiskas Kitten 400g"],
-    "Premium":   ["Royal Canin Adult 2kg","Royal Canin Kitten 2kg"],
+  "Food": {
+    "Sauces": [
+      "Dolmio Bolognese Original 500g","Dolmio Stir-In Tomato 150g",
+      "Dolmio Stir-In Mushroom 150g","ROYCO Beef Cup 70g","ROYCO Chicken Cup 70g",
+      "Miracoli Tomato 300g","Suzi Wan Noodles 300g",
+    ],
+    "Ready Meals": [
+      "Ben's Original Long Grain Rice 250g","Ben's Original Express Basmati 250g",
+      "Ben's Original Wholegrain 250g","Miracoli Spaghetti Kit 611g",
+    ],
   },
-  "Gum & Mints": {
-    "Gum":       ["Extra Peppermint 10pc","Extra Spearmint 10pc"],
-    "Confectionery":["Skittles Original 45g","Starburst Original 45g"],
+  "Health & Wellness": {
+    "BetterForYou": [
+      "KIND Dark Chocolate Nuts Bar 40g","KIND Almond Cashew Bar 40g",
+      "Tru Fru Raspberry Dark Choc 128g","Tru Fru Blueberry White Choc 128g",
+    ],
   },
-  "Rice & Sauces": {
-    "Rice":      ["Uncle Ben's Basmati 500g","Uncle Ben's Express 250g"],
-    "Sauces":    ["Dolmio Bolognese 500g","Dolmio Stir-In 150g"],
+  "Petcare": {
+    "Dry Cat Food": [
+      "Whiskas Adult Chicken 1kg","Whiskas Kitten Chicken 800g",
+      "Whiskas Senior 7+ Salmon 1kg","Royal Canin Indoor Adult 2kg",
+      "Royal Canin Kitten 2kg","Royal Canin Persian Adult 1.5kg",
+    ],
+    "Dry Dog Food": [
+      "Pedigree Adult Beef 3kg","Pedigree Puppy Chicken 3kg",
+      "Pedigree Small Dog 1.5kg","Royal Canin Labrador Adult 3kg",
+      "Royal Canin Mini Adult 2kg","Nutro Small Breed Adult 1.5kg",
+      "Mixed Petcare Bundle 5kg",
+    ],
   },
 };
-export const CATEGORIES    = Object.keys(CATEGORY_TREE);
-export const getSubCats    = (cat) => cat ? Object.keys(CATEGORY_TREE[cat]||{}) : [];
-export const getSKUs       = (cat,sub) => (cat&&sub) ? (CATEGORY_TREE[cat]?.[sub]||[]) : [];
+export const CATEGORIES = Object.keys(CATEGORY_TREE);
+export const getSubCats = (cat) => cat ? Object.keys(CATEGORY_TREE[cat]||{}) : [];
+export const getSKUs    = (cat,sub) => (cat&&sub) ? (CATEGORY_TREE[cat]?.[sub]||[]) : [];
 
 // ─── FILTER DEFAULTS ─────────────────────────────────────────────────────────
 export const FILTER_DEFAULTS = {
   Year:2026, Region:"Europe", Market:"UK",
   Retailer:"All Retailers", Period:"P3",
-  Category:"Chocolate", SubCategory:"Bars", SKU:"Snickers 50g",
+  Category:"Confectionery", SubCategory:"Chocolate", SKU:"Snickers 50g",
 };
 
 // ─── RANDOM HELPERS ───────────────────────────────────────────────────────────
@@ -63,7 +97,7 @@ const vary = (base,seed,range=0.15)=>parseFloat((base*(1+(sr(seed)-0.5)*range)).
 
 // ─── ELASTICITY DATA ──────────────────────────────────────────────────────────
 export const getElasticityData = filters=>{
-  const s=hash(`${filters.Market}-${filters.SKU}-${filters.Period}-${filters.Year}`);
+  const s=hash(`${filters.Market}-${filters.SKU}-${filters.Period}-${filters.Year}-${filters.Category}-${filters.SubCategory}-${filters.Retailer}`);
   const bv=vary(7.3,s,0.20),s1=vary(0.62,s+1,0.25),s2=vary(1.15,s+2,0.25),s3=vary(0.50,s+3,0.25);
   return Array.from({length:29},(_,i)=>{
     const price=parseFloat((3.0+i*0.25).toFixed(2));
@@ -77,7 +111,7 @@ export const getElasticityData = filters=>{
 
 // ─── ELASTICITY METRICS — slider drives delta vol + rev, NO profit ────────────
 export const getElasticityMetrics = (filters,pricePct)=>{
-  const s        = hash(`metrics-${filters.Market}-${filters.SKU}-${filters.Period}`);
+  const s        = hash(`metrics-${filters.Market}-${filters.SKU}-${filters.Period}-${filters.Category}-${filters.SubCategory}-${filters.Retailer}`);
   const elast    = -(0.8+sr(s)*1.4);
   const baseRevK = Math.round(180+sr(s+1)*300);
   const dVolPct  = parseFloat((elast*pricePct).toFixed(1));
@@ -98,7 +132,7 @@ export const getHighlightsData = filters=>{
 
 // ─── PPA DATA — pack size x-axis, price per unit y-axis ─────────────────────
 export const getPPAData = filters=>{
-  const s=hash(`ppa-${filters.Market}-${filters.SKU}-${filters.Retailer}-${filters.Period}`);
+  const s=hash(`ppa-${filters.Market}-${filters.SKU}-${filters.Retailer}-${filters.Period}-${filters.Category}-${filters.SubCategory}`);
   const base=[
     {sku:"Our 26g",    packSize:"26g",  ourBrand:true, baseShelf:1.49,basePpu:0.057,vol:80},
     {sku:"Our 50g",    packSize:"50g",  ourBrand:true, baseShelf:2.49,basePpu:0.050,vol:90},
@@ -110,15 +144,15 @@ export const getPPAData = filters=>{
   ];
   return base.map((item,i)=>({
     ...item,
-    shelf: parseFloat(vary(item.baseShelf,s+i,0.08).toFixed(2)),
-    ppu:   parseFloat(vary(item.basePpu,s+i+50,0.08).toFixed(4)),
-    ppa:   parseFloat(vary(item.basePpu,s+i+50,0.08).toFixed(4)),
+    shelf: parseFloat(vary(item.baseShelf,s+i,0.20).toFixed(2)),
+    ppu:   parseFloat(vary(item.basePpu,s+i+50,0.22).toFixed(4)),
+    ppa:   parseFloat(vary(item.basePpu,s+i+50,0.22).toFixed(4)),
   }));
 };
 
 // ─── BUBBLE DATA — price vs market share vs revenue ───────────────────────────
 export const getBubbleData = filters=>{
-  const s=hash(`bubble-${filters.Market}-${filters.SKU}-${filters.Retailer}-${filters.Period}`);
+  const s=hash(`bubble-${filters.Market}-${filters.SKU}-${filters.Retailer}-${filters.Period}-${filters.Category}-${filters.SubCategory}`);
   const base=[
     {name:filters.SKU||"Our Brand", ours:true,  basePrice:4.99,baseShare:28,baseRev:42},
     {name:"Comp A",                 ours:false, basePrice:5.29,baseShare:22,baseRev:34},
@@ -129,9 +163,9 @@ export const getBubbleData = filters=>{
   ];
   return base.map((item,i)=>({
     ...item,
-    price:   parseFloat(vary(item.basePrice,s+i,0.08).toFixed(2)),
-    share:   parseFloat(vary(item.baseShare,s+i+10,0.12).toFixed(1)),
-    revenue: parseFloat(vary(item.baseRev,s+i+20,0.15).toFixed(1)),
+    price:   parseFloat(vary(item.basePrice,s+i,0.18).toFixed(2)),
+    share:   parseFloat(vary(item.baseShare,s+i+10,0.28).toFixed(1)),
+    revenue: parseFloat(vary(item.baseRev,s+i+20,0.28).toFixed(1)),
   }));
 };
 
@@ -190,8 +224,8 @@ export const NOTIFICATIONS_BY_PERSONA = {
 // ─── PERSONA CONFIG ──────────────────────────────────────────────────────────
 export const PERSONA_CONFIG = {
   Executive: {
-    pages:       ["Home","Pricing Strategy","Promotions"],
-    livePages:   ["Home","Pricing Strategy","Promotions"],
+    pages:       ["Home","Pricing Strategy","Promotions","Trade & Terms","Pack-Price Architecture","SKU Rationalization"],
+    livePages:   ["Home","Pricing Strategy","Promotions","Trade & Terms","Pack-Price Architecture","SKU Rationalization"],
     kpis: [
       { id:"rev",    label:"Net Revenue",       value:(s,vary)=>`$${vary(142.5,s+1,0.18)}M`, color:"#5500bb" },
       { id:"share",  label:"Market Share",      value:(s,vary)=>`${vary(28.4,s+2,0.12)}%`,  color:"#5500bb" },
@@ -204,8 +238,8 @@ export const PERSONA_CONFIG = {
     homeSubtitle: "Executive Dashboard · Full Portfolio View",
   },
   Finance: {
-    pages:       ["Home","Pricing Strategy","Promotions"],
-    livePages:   ["Home","Pricing Strategy","Promotions"],
+    pages:       ["Home","Pricing Strategy","Promotions","Trade & Terms","Pack-Price Architecture","SKU Rationalization"],
+    livePages:   ["Home","Pricing Strategy","Promotions","Trade & Terms","Pack-Price Architecture","SKU Rationalization"],
     kpis: [
       { id:"rev",    label:"Net Revenue",       value:(s,vary)=>`$${vary(142.5,s+1,0.18)}M`, color:"#5500bb" },
       { id:"gm",     label:"Gross Margin %",    value:(s,vary)=>`${vary(41.2,s+2,0.10)}%`,   color:"#5500bb" },

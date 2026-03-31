@@ -40,11 +40,11 @@ export default function Navbar() {
   const skus    = getSKUs(filters.Category, filters.SubCategory);
 
   // Filter select component
-  const Sel = ({ label, value, options, onChange, width = 110 }) => (
+  const Sel = ({ label, value, options, onChange, width = 90 }) => (
     <div style={{ display:"flex", alignItems:"center", gap:5 }}>
       <span style={{ fontSize:9, fontFamily:"'MarsBold',system-ui", color:"#8b8fb8", textTransform:"uppercase", letterSpacing:".08em", whiteSpace:"nowrap" }}>{label}</span>
       <select value={value} onChange={e => onChange(e.target.value)}
-        style={{ width, padding:"4px 8px", borderRadius:6, border:"1px solid #e0e0f0", background:"#f8f8fc", color:"#1a1a2e", fontSize:11, fontFamily:"inherit", cursor:"pointer", outline:"none" }}>
+        style={{ width, padding:"3px 6px", borderRadius:5, border:"1px solid #e0e0f0", background:"#f8f8fc", color:"#1a1a2e", fontSize:10, fontFamily:"inherit", cursor:"pointer", outline:"none" }}>
         {options.map(o => <option key={o} value={o}>{o}</option>)}
       </select>
     </div>
@@ -168,38 +168,34 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* ── Filter strip ── */}
-      <div style={{ background:"#fff", borderBottom:"1px solid #e8e8f4", padding:"6px 20px", display:"flex", alignItems:"center", gap:14, overflowX:"auto", flexWrap:"nowrap", boxShadow:"0 1px 4px rgba(0,0,160,.04)" }}>
-        <Sel label="Year"    value={String(filters.Year)}    options={YEARS.map(y=>String(y))}
-          onChange={y => { setFilter("Year")(parseInt(y)); setFilter("Period")("P3"); }} />
-        <Sel label="Region"  value={filters.Region}          options={REGIONS}
-          onChange={r => { setFilter("Region")(r); setFilter("Market")(REGION_MARKET_MAP[r]?.[0]||""); }} />
-        <Sel label="Market"  value={filters.Market}          options={markets}
-          onChange={setFilter("Market")} width={100} />
-        <Sel label="Retailer" value={filters.Retailer}       options={RETAILERS}
-          onChange={setFilter("Retailer")} width={120} />
-        <Sel label="Period"  value={filters.Period}          options={PERIODS}
-          onChange={setFilter("Period")} width={60} />
-        <div style={{ width:1, height:20, background:"rgba(255,255,255,.2)", flexShrink:0 }}/>
-        <Sel label="Category"  value={filters.Category}      options={CATEGORIES}
-          onChange={cat => setFilter("Category")(cat)} width={110} />
-        {subCats.length > 0 && (
-          <Sel label="Sub-Cat" value={filters.SubCategory}   options={subCats}
-            onChange={setFilter("SubCategory")} width={100} />
-        )}
-        {skus.length > 0 && (
-          <Sel label="SKU"     value={filters.SKU}            options={skus}
-            onChange={setFilter("SKU")} width={140} />
-        )}
+      {/* ── Filter strip — always visible, no scroll, fit in one glance ── */}
+      <div style={{ background:"#fff", borderBottom:"1px solid #e8e8f4", padding:"5px 16px", display:"flex", alignItems:"center", gap:6, flexWrap:"nowrap", boxShadow:"0 1px 4px rgba(0,0,160,.04)" }}>
+        <Sel label="Year"     value={String(filters.Year)}  options={YEARS.map(y=>String(y))}
+          onChange={y => { setFilter("Year")(parseInt(y)); }} width={58} />
+        <Sel label="Region"   value={filters.Region}        options={REGIONS}
+          onChange={r => { setFilter("Region")(r); setFilter("Market")(REGION_MARKET_MAP[r]?.[0]||""); }} width={92} />
+        <Sel label="Market"   value={filters.Market}        options={markets}
+          onChange={setFilter("Market")} width={72} />
+        <Sel label="Retailer" value={filters.Retailer}      options={RETAILERS}
+          onChange={setFilter("Retailer")} width={100} />
+        <Sel label="Period"   value={filters.Period}        options={PERIODS}
+          onChange={setFilter("Period")} width={46} />
+        <div style={{ width:1, height:16, background:"#e0e0f0", flexShrink:0, margin:"0 2px" }}/>
+        <Sel label="Category"  value={filters.Category}     options={CATEGORIES}
+          onChange={cat => setFilter("Category")(cat)} width={100} />
+        <Sel label="Sub-Cat"   value={filters.SubCategory}  options={subCats.length?subCats:[filters.SubCategory]}
+          onChange={setFilter("SubCategory")} width={88} />
+        <Sel label="SKU"       value={filters.SKU}          options={skus.length?skus:[filters.SKU]}
+          onChange={setFilter("SKU")} width={120} />
         {/* Reset */}
         <button onClick={() => {
           setFilter("Year")(2026); setFilter("Region")("Europe");
           setFilter("Market")("UK"); setFilter("Retailer")("All Retailers");
-          setFilter("Period")("P3"); setFilter("Category")("Chocolate");
-          setFilter("SubCategory")("Bars"); setFilter("SKU")("Snickers 50g");
-        }} style={{ marginLeft:"auto", padding:"4px 12px", borderRadius:6, border:`1px solid ${MARS.blue}30`, background:`${MARS.blue}08`, color:MARS.blue, fontSize:10, fontFamily:"'MarsBold',system-ui", cursor:"pointer", whiteSpace:"nowrap", flexShrink:0, transition:"all .15s" }}
+          setFilter("Period")("P3"); setFilter("Category")("Confectionery");
+          setFilter("SubCategory")("Chocolate"); setFilter("SKU")("Snickers 50g");
+        }} style={{ marginLeft:"auto", padding:"3px 10px", borderRadius:6, border:`1px solid ${MARS.blue}25`, background:`${MARS.blue}06`, color:MARS.blue, fontSize:10, fontFamily:"'MarsBold',system-ui", cursor:"pointer", whiteSpace:"nowrap", flexShrink:0, transition:"all .15s" }}
           onMouseOver={e=>{ e.currentTarget.style.background=MARS.blue; e.currentTarget.style.color="#fff"; }}
-          onMouseOut={e=>{ e.currentTarget.style.background=`${MARS.blue}08`; e.currentTarget.style.color=MARS.blue; }}>
+          onMouseOut={e=>{ e.currentTarget.style.background=`${MARS.blue}06`; e.currentTarget.style.color=MARS.blue; }}>
           ↺ Reset
         </button>
       </div>

@@ -4,9 +4,12 @@ import { FilterProvider }        from "./context/FilterContext";
 import LoginPage      from "./pages/LoginPage";
 import HomePage       from "./pages/HomePage";
 import PricingAndPack from "./pages/PricingAndPack";
-import PromotionsPage from "./pages/Promotionspage";
+import PromotionsPage from "./pages/PromotionsPage";
 import Navbar         from "./components/Navbar";
 import SideNav        from "./components/SideNav";
+import TradeTermsPage     from "./pages/Tradetermspage";
+import AssortmentMixPage      from "./pages/AssortmentMixPage";
+import SkuRationalizationPage from "./pages/SkuRationalizationPage";
 import { PERSONA_CONFIG } from "./data/mockData";
 
 function UnderConstruction({ page }) {
@@ -57,7 +60,10 @@ function AppShell() {
             {activePage === "Home"         && <HomePage/>}
             {activePage === "Pricing Strategy" && <PricingAndPack/>}
             {activePage === "Promotions"   && <PromotionsPage/>}
-            {!livePages.includes(activePage) && <UnderConstruction page={activePage}/>}
+            {activePage === "Trade & Terms"      && <TradeTermsPage/>}
+          {activePage === "Pack-Price Architecture"      && <AssortmentMixPage/>}
+          {activePage === "SKU Rationalization"   && <SkuRationalizationPage/>}
+          {!livePages.includes(activePage) && <UnderConstruction page={activePage}/>}
           </main>
         </div>
       </div>

@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { PERSONA_CONFIG, MARS } from "../data/mockData";
 
-// Clean SVG icons for each page
 const ICONS = {
   "Home": (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -21,29 +20,33 @@ const ICONS = {
   ),
   "Trade & Terms": (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M16 16h6"/><path d="M19 13v6"/><path d="M12 3H3v10l9 9"/><path d="M3 3l18 18"/>
+      <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
     </svg>
   ),
-  "Assortment & Mix": (
+  "Pack-Price Architecture": (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+      <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+      <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
     </svg>
   ),
-  "Activation": (
+  "SKU Rationalization": (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <polygon points="5 3 19 12 5 21 5 3"/>
-    </svg>
-  ),
-  "Governance": (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+      <line x1="8" y1="18" x2="21" y2="18"/>
+      <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/>
+      <line x1="3" y1="18" x2="3.01" y2="18"/>
     </svg>
   ),
 };
 
+// Only the 6 live pages — no Activation, no Governance
 const PAGES = [
-  "Home", "Pricing Strategy", "Promotions",
-  "Trade & Terms", "Assortment & Mix", "Activation", "Governance",
+  "Home",
+  "Pricing Strategy",
+  "Promotions",
+  "Trade & Terms",
+  "Pack-Price Architecture",
+  "SKU Rationalization",
 ];
 
 export default function SideNav({ activePage, setActivePage }) {
@@ -55,21 +58,23 @@ export default function SideNav({ activePage, setActivePage }) {
 
   return (
     <aside style={{
-      width:      collapsed ? 56 : 196,
-      flexShrink: 0,
-      background: "#fff",
-      borderRight:"1px solid #e8e8f4",
-      display:    "flex",
+      width:         collapsed ? 56 : 196,
+      flexShrink:    0,
+      background:    "#fff",
+      borderRight:   "1px solid #e8e8f4",
+      display:       "flex",
       flexDirection: "column",
-      transition: "width .2s ease",
-      overflow:   "hidden",
-      zIndex:     10,
+      transition:    "width .2s ease",
+      overflow:      "hidden",
+      zIndex:        10,
+      height:        "100%",
+      alignSelf:     "stretch",
     }}>
 
-      {/* Toggle button */}
+      {/* Toggle */}
       <button onClick={() => setCollapsed(v => !v)}
-        style={{ display:"flex", alignItems:"center", justifyContent: collapsed ? "center" : "flex-end", padding:"12px 12px 10px", background:"transparent", border:"none", borderBottom:"1px solid #f0f0f8", cursor:"pointer", flexShrink:0 }}>
-        <svg style={{ width:16, height:16, color:"#8b8fb8", transform: collapsed ? "rotate(180deg)" : "none", transition:"transform .2s" }}
+        style={{ display:"flex", alignItems:"center", justifyContent:collapsed?"center":"flex-end", padding:"12px 12px 10px", background:"transparent", border:"none", borderBottom:"1px solid #f0f0f8", cursor:"pointer", flexShrink:0 }}>
+        <svg style={{ width:16, height:16, color:"#8b8fb8", transform:collapsed?"rotate(180deg)":"none", transition:"transform .2s" }}
           viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
           <path d="M15 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
@@ -80,8 +85,6 @@ export default function SideNav({ activePage, setActivePage }) {
         {PAGES.map(page => {
           const isActive = page === activePage;
           const isLive   = livePages.includes(page);
-          const icon     = ICONS[page];
-
           return (
             <button key={page}
               onClick={() => isLive && setActivePage(page)}
@@ -102,16 +105,12 @@ export default function SideNav({ activePage, setActivePage }) {
                 transition:     "background .15s",
               }}
               onMouseOver={e => { if(isLive && !isActive) e.currentTarget.style.background = "#f4f4fc"; }}
-              onMouseOut={e =>  { if(isLive && !isActive) e.currentTarget.style.background = "transparent"; }}
-            >
-              {/* Icon */}
-              <span style={{ width:18, height:18, flexShrink:0, color: isActive ? MARS.blue : "#8b8fb8", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                {icon}
+              onMouseOut={e =>  { if(isLive && !isActive) e.currentTarget.style.background = "transparent"; }}>
+              <span style={{ width:18, height:18, flexShrink:0, color:isActive?MARS.blue:"#8b8fb8", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                {ICONS[page]}
               </span>
-
-              {/* Label */}
               {!collapsed && (
-                <span style={{ fontSize:12, fontFamily: isActive ? "'MarsBold',system-ui" : "inherit", color: isActive ? MARS.blue : "#3a3a5c", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                <span style={{ fontSize:12, fontFamily:isActive?"'MarsBold',system-ui":"inherit", color:isActive?MARS.blue:"#3a3a5c", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
                   {page}
                 </span>
               )}
@@ -120,7 +119,7 @@ export default function SideNav({ activePage, setActivePage }) {
         })}
       </nav>
 
-      {/* Bottom persona badge */}
+      {/* Persona badge */}
       {!collapsed && (
         <div style={{ padding:"10px 14px", borderTop:"1px solid #f0f0f8", flexShrink:0 }}>
           <div style={{ fontSize:8, fontFamily:"'MarsBold',system-ui", color:"#8b8fb8", textTransform:"uppercase", letterSpacing:".1em", marginBottom:3 }}>Persona</div>

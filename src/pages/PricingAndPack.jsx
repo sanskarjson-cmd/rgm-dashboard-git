@@ -4,7 +4,7 @@ import {
   BarChart, Bar, Cell, ReferenceLine,
 } from "recharts";
 import { useFilters }  from "../context/FilterContext";
-import { getElasticityData, MARS } from "../data/mockData";
+import { MARS } from "../data/mockData";
 
 const PURPLE = "#5500bb";
 
@@ -34,13 +34,6 @@ function ChartBox({ height=220, children }) {
 const Card = ({ children, style }) => (
   <div style={{ background:"#fff", borderRadius:12, border:"1px solid #e8e8f4", boxShadow:"0 2px 10px rgba(0,0,160,.05)", ...style }}>
     {children}
-  </div>
-);
-
-const SectionTitle = ({ children, sub }) => (
-  <div style={{ marginBottom:14 }}>
-    <div style={{ fontSize:13, fontFamily:"'MarsBold',system-ui", color:"#1a1a2e" }}>{children}</div>
-    {sub && <div style={{ fontSize:10, color:"#8b8fb8", marginTop:2 }}>{sub}</div>}
   </div>
 );
 
@@ -86,7 +79,7 @@ function Modal({ title, subtitle, onClose, children }) {
   }, [onClose]);
   return (
     <>
-      <div onClick={onClose} style={{ position:"fixed", inset:0, zIndex:200, background:"rgba(0,0,30,.75)", backdropFilter:"blur(6px)" }} />
+      <div onClick={onClose} style={{ position:"fixed", inset:0, zIndex:200, background:"rgba(0,0,30,.75)", backdropFilter:"blur(6px)" }}/>
       <div style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", zIndex:201, width:"min(92vw,1100px)", maxHeight:"88vh", background:"#fff", borderRadius:16, boxShadow:"0 32px 80px rgba(0,0,160,.2)", display:"flex", flexDirection:"column", overflow:"hidden" }}>
         <div style={{ background:`linear-gradient(135deg,${MARS.blue},#0000c8)`, padding:"14px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", borderBottom:`3px solid ${MARS.yellow}`, flexShrink:0 }}>
           <div>
@@ -101,7 +94,6 @@ function Modal({ title, subtitle, onClose, children }) {
   );
 }
 
-// ─── EXPAND BUTTON ────────────────────────────────────────────────────────────
 function ExpandBtn({ onClick }) {
   return (
     <button onClick={onClick}
@@ -120,7 +112,7 @@ function CardHeader({ title, sub, onExpand }) {
         <div style={{ fontSize:13, fontFamily:"'MarsBold',system-ui", color:"#1a1a2e" }}>{title}</div>
         {sub && <div style={{ fontSize:10, color:"#8b8fb8", marginTop:2 }}>{sub}</div>}
       </div>
-      <ExpandBtn onClick={onExpand} />
+      <ExpandBtn onClick={onExpand}/>
     </div>
   );
 }
@@ -157,40 +149,106 @@ function ElasticityMatrix({ filters }) {
 }
 
 // ─── PRICE SIMULATOR ──────────────────────────────────────────────────────────
-const ELAS_MAP = { "Snickers":-1.86,"M&M's":-1.94,"Twix":-2.08,"Skittles":-1.71,"Starburst":-1.64 };
-const CH_NAMES = { 1:"Convenience",2:"Drug",3:"Mass",4:"Grocery",5:"Club" };
+const ELAS_MAP  = { "Snickers":-1.86,"M&M's":-1.94,"Twix":-2.08,"Skittles":-1.71,"Starburst":-1.64 };
+const CH_NAMES  = { 1:"Convenience",2:"Drug",3:"Mass",4:"Grocery",5:"Club" };
+const CH_WEIGHTS= { 1:1.18,2:1.08,3:1.0,4:0.94,5:0.88 };
 
-function PriceSimulator() {
-  const [brand,setPriceBrand] = useState("Snickers");
-  const [pricePct,setPricePct] = useState(5);
-  const [channel,setChannel] = useState(3);
-  const e=ELAS_MAP[brand]||-1.86;
+let _pricingScenarios = [];
+const pricingScenarioStore = { get:()=>_pricingScenarios, add:(item)=>{_pricingScenarios=[..._pricingScenarios,item];}, clear:()=>{_pricingScenarios=[];} };
+
+function PriceSimulator({ filters }) {
+  const [brand,     setBrand]     = useState("Snickers");
+  const [pricePct,  setPricePct]  = useState(5);
+  const [channel,   setChannel]   = useState(3);
+  const [scenarios, setScenarios] = useState(pricingScenarioStore.get());
+  const [flash,     setFlash]     = useState(false);
+  const [showCart,  setShowCart]  = useState(false);
+  const [guardrails,setGuardrails]= useState(true);
+  const GR_MIN=-5, GR_MAX=8;
+
+  const baseE=ELAS_MAP[brand]||-1.86, chWeight=CH_WEIGHTS[channel]||1.0;
+  const e=parseFloat((baseE*chWeight).toFixed(3));
   const volDelta=parseFloat((e*pricePct).toFixed(1));
   const revDelta=parseFloat((pricePct+volDelta).toFixed(1));
   const mgnDelta=parseFloat((pricePct*0.42).toFixed(1));
   const revM=(Math.abs(revDelta)*2.34).toFixed(1);
+
+  const handleAddScenario=()=>{
+    const item={id:Date.now(),brand,channel:CH_NAMES[channel],pricePct:`${pricePct>=0?"+":""}${pricePct}%`,elasticity:e,volDelta:`${volDelta>=0?"+":""}${volDelta}%`,revDelta:`${revDelta>=0?"+":""}${revDelta}%`,revImpact:`${revDelta>=0?"+":"-"}$${revM}M`,mgnDelta:`${mgnDelta>=0?"+":""}${mgnDelta}pp`,market:filters.Market,period:filters.Period};
+    pricingScenarioStore.add(item); setScenarios([...pricingScenarioStore.get()]); setFlash(true); setTimeout(()=>setFlash(false),1500);
+  };
+
   const MV=({val,label})=><div style={{textAlign:"center"}}><div style={{fontSize:16,fontFamily:"'MarsExtrabold',system-ui",color:val>=0?"#5dde91":"#ff7a8a"}}>{val>=0?"+":""}{val}%</div><div style={{fontSize:9,color:"rgba(255,255,255,.5)",textTransform:"uppercase",letterSpacing:".05em",marginTop:2}}>{label}</div></div>;
-  return (
+
+  return(
     <div>
-      <div style={{marginBottom:14}}><div style={{fontSize:9,fontFamily:"'MarsBold',system-ui",color:"#8b8fb8",textTransform:"uppercase",letterSpacing:".08em",marginBottom:4}}>Brand</div>
-        <select value={brand} onChange={e=>setPriceBrand(e.target.value)} style={{width:"100%",padding:"7px 10px",borderRadius:7,border:"1px solid #e8e8f4",fontSize:12,color:"#1a1a2e",background:"#f8f8fc",fontFamily:"inherit",cursor:"pointer"}}>
+      {showCart&&(
+        <>
+          <div onClick={()=>setShowCart(false)} style={{position:"fixed",inset:0,zIndex:200,background:"rgba(0,0,30,.6)",backdropFilter:"blur(4px)"}}/>
+          <div style={{position:"fixed",top:"50%",left:"50%",transform:"translate(-50%,-50%)",zIndex:201,width:"min(90vw,820px)",background:"#fff",borderRadius:16,overflow:"hidden",boxShadow:"0 32px 80px rgba(0,0,160,.2)"}}>
+            <div style={{background:`linear-gradient(135deg,${MARS.blue},#0000c8)`,padding:"14px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:`3px solid ${MARS.yellow}`}}>
+              <div><div style={{fontSize:14,fontFamily:"'MarsBold',system-ui",color:"#fff"}}>Pricing Scenario Cart</div><div style={{fontSize:11,color:"rgba(255,255,255,.55)",marginTop:1}}>{scenarios.length} scenario{scenarios.length!==1?"s":""}</div></div>
+              <div style={{display:"flex",gap:8}}>
+                {scenarios.length>0&&<button onClick={()=>{const keys=Object.keys(scenarios[0]);const csv=[keys.join(","),...scenarios.map(r=>keys.map(k=>`"${r[k]}"`).join(","))].join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="pricing_scenarios.csv";a.click();}} style={{padding:"6px 14px",borderRadius:7,border:"none",background:MARS.yellow,fontSize:11,fontFamily:"'MarsBold',system-ui",color:MARS.blue,cursor:"pointer"}}>↓ Download CSV</button>}
+                <button onClick={()=>{pricingScenarioStore.clear();setScenarios([]);}} style={{padding:"6px 12px",borderRadius:7,border:"1px solid rgba(255,255,255,.3)",background:"transparent",fontSize:11,fontFamily:"'MarsBold',system-ui",color:"#fff",cursor:"pointer"}}>Clear</button>
+                <button onClick={()=>setShowCart(false)} style={{width:32,height:32,borderRadius:7,border:"1px solid rgba(255,255,255,.2)",background:"rgba(255,255,255,.1)",cursor:"pointer",color:"#fff",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+              </div>
+            </div>
+            <div style={{padding:"16px 20px",overflowY:"auto",maxHeight:"60vh"}}>
+              {scenarios.length===0
+                ?<div style={{textAlign:"center",padding:"40px 0",color:"#8b8fb8",fontSize:13}}>No scenarios saved yet.</div>
+                :<table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr style={{borderBottom:"2px solid #e8e8f4",background:"#f8f8fc"}}>{["Brand","Channel","Price Δ","Elasticity","Vol Δ","Rev Δ","Rev Impact","Margin Δ","Market","Period"].map(h=><th key={h} style={{padding:"8px 10px",textAlign:"left",fontSize:9,fontFamily:"'MarsBold',system-ui",color:"#8b8fb8",textTransform:"uppercase",letterSpacing:".06em",whiteSpace:"nowrap"}}>{h}</th>)}</tr></thead><tbody>{scenarios.map((r,i)=>(<tr key={r.id} style={{borderBottom:"1px solid #f0f0f8",background:i%2===0?"#fff":"#f9f9fc"}}><td style={{padding:"8px 10px",fontSize:11,fontFamily:"'MarsBold',system-ui",color:MARS.blue}}>{r.brand}</td><td style={{padding:"8px 10px",fontSize:11}}>{r.channel}</td><td style={{padding:"8px 10px",fontSize:11,fontFamily:"'MarsBold',system-ui",color:parseFloat(r.pricePct)>=0?"#00967a":MARS.red}}>{r.pricePct}</td><td style={{padding:"8px 10px",fontSize:11}}>{r.elasticity}</td><td style={{padding:"8px 10px",fontSize:11,fontFamily:"'MarsBold',system-ui",color:parseFloat(r.volDelta)>=0?"#00967a":MARS.red}}>{r.volDelta}</td><td style={{padding:"8px 10px",fontSize:11,fontFamily:"'MarsBold',system-ui",color:parseFloat(r.revDelta)>=0?"#00967a":MARS.red}}>{r.revDelta}</td><td style={{padding:"8px 10px",fontSize:11,fontFamily:"'MarsBold',system-ui",color:parseFloat(r.revImpact)>=0?"#00967a":MARS.red}}>{r.revImpact}</td><td style={{padding:"8px 10px",fontSize:11}}>{r.mgnDelta}</td><td style={{padding:"8px 10px",fontSize:11}}>{r.market}</td><td style={{padding:"8px 10px",fontSize:11}}>{r.period}</td></tr>))}</tbody></table>
+              }
+            </div>
+          </div>
+        </>
+      )}
+
+      <div style={{marginBottom:12}}>
+        <div style={{fontSize:9,fontFamily:"'MarsBold',system-ui",color:"#8b8fb8",textTransform:"uppercase",letterSpacing:".08em",marginBottom:4}}>Brand</div>
+        <select value={brand} onChange={e=>setBrand(e.target.value)} style={{width:"100%",padding:"7px 10px",borderRadius:7,border:"1px solid #e8e8f4",fontSize:12,color:"#1a1a2e",background:"#f8f8fc",fontFamily:"inherit",cursor:"pointer"}}>
           {Object.keys(ELAS_MAP).map(b=><option key={b} value={b}>{b}</option>)}
         </select>
       </div>
-      <div style={{display:"flex",alignItems:"center",gap:12,padding:"10px 0",borderBottom:"1px solid #f0f0f8"}}>
-        <div style={{width:130,fontSize:12,fontFamily:"'MarsBold',system-ui",color:"#1a1a2e"}}>Price Change %</div>
-        <input type="range" min={-15} max={15} value={pricePct} onChange={e=>setPricePct(parseInt(e.target.value))} style={{flex:1,accentColor:MARS.blue}}/>
-        <div style={{width:50,textAlign:"right",fontSize:13,fontFamily:"'MarsExtrabold',system-ui",color:MARS.red}}>{pricePct>=0?"+":""}{pricePct}%</div>
+      <div style={{display:"flex",alignItems:"center",gap:12,padding:"8px 0",borderBottom:"1px solid #f0f0f8"}}>
+        <div style={{width:120,fontSize:12,fontFamily:"'MarsBold',system-ui",color:"#1a1a2e"}}>Price Change %</div>
+        <input type="range" min={-15} max={15} value={pricePct} onChange={e=>{const v=parseInt(e.target.value);setPricePct(guardrails?Math.min(GR_MAX,Math.max(GR_MIN,v)):v);}} style={{flex:1,accentColor:MARS.blue}}/>
+        <div style={{width:44,textAlign:"right",fontSize:13,fontFamily:"'MarsExtrabold',system-ui",color:MARS.red}}>{pricePct>=0?"+":""}{pricePct}%</div>
       </div>
-      <div style={{display:"flex",alignItems:"center",gap:12,padding:"10px 0",borderBottom:"1px solid #f0f0f8"}}>
-        <div style={{width:130,fontSize:12,fontFamily:"'MarsBold',system-ui",color:"#1a1a2e"}}>Channel Weight</div>
+      <div style={{display:"flex",alignItems:"center",gap:12,padding:"8px 0",borderBottom:"1px solid #f0f0f8"}}>
+        <div style={{width:120,fontSize:12,fontFamily:"'MarsBold',system-ui",color:"#1a1a2e"}}>Channel Weight</div>
         <input type="range" min={1} max={5} value={channel} onChange={e=>setChannel(parseInt(e.target.value))} style={{flex:1,accentColor:MARS.blue}}/>
-        <div style={{width:50,textAlign:"right",fontSize:11,fontFamily:"'MarsBold',system-ui",color:MARS.blue}}>{CH_NAMES[channel]}</div>
+        <div style={{width:80,textAlign:"right"}}>
+          <div style={{fontSize:10,fontFamily:"'MarsBold',system-ui",color:MARS.blue}}>{CH_NAMES[channel]}</div>
+          <div style={{fontSize:9,color:"#8b8fb8"}}>×{chWeight.toFixed(2)}</div>
+        </div>
       </div>
-      <div style={{background:`linear-gradient(135deg,${MARS.blue},#0000c8)`,borderRadius:12,padding:16,color:"#fff",textAlign:"center",marginTop:14}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 0",borderBottom:"1px solid #f0f0f8"}}>
+        <div>
+          <div style={{fontSize:12,fontFamily:"'MarsBold',system-ui",color:"#1a1a2e"}}>Respect Guardrails</div>
+          <div style={{fontSize:9,color:guardrails?"#00967a":MARS.red,marginTop:1}}>{guardrails?`✓ Capped: ${GR_MIN}% to +${GR_MAX}%`:"⚠ Full range unlocked"}</div>
+        </div>
+        <button onClick={()=>{const next=!guardrails;setGuardrails(next);if(next)setPricePct(p=>Math.min(GR_MAX,Math.max(GR_MIN,p)));}} style={{background:"none",border:"none",cursor:"pointer",padding:0}}>
+          <div style={{width:36,height:20,borderRadius:10,background:guardrails?"#00967a":"#ddd",position:"relative",transition:"background .3s",boxShadow:"inset 0 1px 3px rgba(0,0,0,.15)"}}>
+            <div style={{position:"absolute",top:2,left:guardrails?17:2,width:16,height:16,borderRadius:"50%",background:"#fff",boxShadow:"0 1px 4px rgba(0,0,0,.25)",transition:"left .25s"}}/>
+          </div>
+        </button>
+      </div>
+      {!guardrails&&(pricePct<GR_MIN||pricePct>GR_MAX)&&<div style={{fontSize:9,color:MARS.red,fontFamily:"'MarsBold',system-ui",background:"#fff1f0",borderRadius:5,padding:"3px 8px",marginTop:4,textAlign:"center"}}>⚠ Outside guardrail limits ({pricePct<GR_MIN?`below ${GR_MIN}%`:`above +${GR_MAX}%`})</div>}
+      <div style={{fontSize:10,color:"#8b8fb8",padding:"6px 0 2px",display:"flex",justifyContent:"space-between"}}>
+        <span>Effective elasticity for {CH_NAMES[channel]}:</span>
+        <span style={{fontFamily:"'MarsBold',system-ui",color:"#1a1a2e"}}>{e}</span>
+      </div>
+      <div style={{background:`linear-gradient(135deg,${MARS.blue},#0000c8)`,borderRadius:12,padding:14,color:"#fff",textAlign:"center",marginTop:10}}>
         <div style={{fontSize:10,color:"rgba(255,255,255,.5)",textTransform:"uppercase",letterSpacing:".05em"}}>Projected Revenue Impact</div>
-        <div style={{fontSize:28,fontFamily:"'MarsExtrabold',system-ui",color:"#fff",margin:"6px 0"}}>{revDelta>=0?"+":"-"}${revM}M</div>
-        <div style={{display:"flex",justifyContent:"space-around",marginTop:12}}><MV val={volDelta} label="Volume Δ"/><MV val={revDelta} label="Revenue Δ"/><MV val={mgnDelta} label="Margin Δ"/></div>
+        <div style={{fontSize:26,fontFamily:"'MarsExtrabold',system-ui",color:"#fff",margin:"4px 0"}}>{revDelta>=0?"+":"-"}${revM}M</div>
+        <div style={{display:"flex",justifyContent:"space-around",marginTop:10}}><MV val={volDelta} label="Volume Δ"/><MV val={revDelta} label="Revenue Δ"/><MV val={mgnDelta} label="Margin Δ"/></div>
+      </div>
+      <div style={{display:"flex",gap:8,marginTop:10}}>
+        <button onClick={handleAddScenario} style={{flex:1,padding:"9px",borderRadius:8,background:flash?"#00967a":MARS.blue,color:"#fff",fontFamily:"'MarsBold',system-ui",fontSize:11,border:"none",cursor:"pointer",transition:"background .3s"}}>{flash?"✓ Saved!":"+ Add to Scenario"}</button>
+        <button onClick={()=>setShowCart(true)} style={{padding:"9px 12px",borderRadius:8,border:`1px solid ${MARS.blue}30`,background:`${MARS.blue}08`,color:MARS.blue,fontFamily:"'MarsBold',system-ui",fontSize:11,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
+          Cart {scenarios.length>0&&<span style={{background:MARS.blue,color:"#fff",borderRadius:20,padding:"0px 5px",fontSize:9}}>{scenarios.length}</span>}
+        </button>
       </div>
     </div>
   );
@@ -202,7 +260,7 @@ function DemandCurveChart({ filters, w, h }) {
   const e=-(1.7+sr(s)*0.4), base=vary(180,s+1,0.20), cur=vary(1.79,s+2,0.06);
   const prices=[1.19,1.29,1.39,1.49,1.59,1.69,1.79,1.89,1.99,2.09,2.19];
   const data=prices.map(p=>({price:p,vol:Math.round(base*Math.pow(cur/p,Math.abs(e))),isCurrent:Math.abs(p-cur)<0.05}));
-  return (
+  return(
     <LineChart width={w} height={h} data={data} margin={{top:10,right:20,left:0,bottom:20}}>
       <CartesianGrid strokeDasharray="4 4" stroke="#ebebf4"/>
       <XAxis dataKey="price" tickFormatter={v=>`$${v}`} tick={{fontSize:10,fill:"#8b8fb8"}} axisLine={{stroke:"#e0e0f0"}} tickLine={false} label={{value:"Price ($)",position:"insideBottom",offset:-10,fontSize:10,fill:"#8b8fb8"}}/>
@@ -218,7 +276,7 @@ function DemandCurveChart({ filters, w, h }) {
 function CompPriceChart({ filters, w, h }) {
   const s=hash(`comp-${filters.Market}-${filters.Period}`);
   const data=[{name:"Snickers",price:vary(1.79,s+1,0.06),ours:true},{name:"Reese's",price:vary(1.69,s+2,0.06),ours:false},{name:"Kit Kat",price:vary(1.79,s+3,0.06),ours:false},{name:"Hershey's",price:vary(1.59,s+4,0.06),ours:false},{name:"Twix",price:vary(1.89,s+5,0.06),ours:true},{name:"Baby Ruth",price:vary(1.49,s+6,0.06),ours:false}];
-  return (
+  return(
     <BarChart width={w} height={h} data={data} margin={{top:10,right:20,left:0,bottom:20}}>
       <CartesianGrid strokeDasharray="4 4" stroke="#ebebf4"/>
       <XAxis dataKey="name" tick={{fontSize:10,fill:"#8b8fb8"}} axisLine={{stroke:"#e0e0f0"}} tickLine={false}/>
@@ -233,11 +291,11 @@ function CompPriceChart({ filters, w, h }) {
 function PriceWaterfallTable({ filters }) {
   const s=hash(`pwf-${filters.Market}-${filters.Period}-${filters.Year}`);
   const rows=[
-    {brand:"Snickers 1.86oz",list:1.79,trade:-0.12,promo:-0.08,oi:-0.02,target:87},
+    {brand:"Snickers 1.86oz",    list:1.79,trade:-0.12,promo:-0.08,oi:-0.02,target:87},
     {brand:"M&M's Peanut 1.74oz",list:1.89,trade:-0.14,promo:-0.11,oi:-0.03,target:87},
-    {brand:"Twix 1.79oz",list:1.89,trade:-0.18,promo:-0.14,oi:-0.04,target:86},
-    {brand:"Skittles 2.17oz",list:1.59,trade:-0.10,promo:-0.07,oi:-0.01,target:88},
-    {brand:"Starburst 2.07oz",list:1.59,trade:-0.11,promo:-0.09,oi:-0.02,target:87},
+    {brand:"Twix 1.79oz",        list:1.89,trade:-0.18,promo:-0.14,oi:-0.04,target:86},
+    {brand:"Skittles 2.17oz",    list:1.59,trade:-0.10,promo:-0.07,oi:-0.01,target:88},
+    {brand:"Starburst 2.07oz",   list:1.59,trade:-0.11,promo:-0.09,oi:-0.02,target:87},
   ].map((r,i)=>{
     const list=vary(r.list,s+i,0.06),trade=vary(r.trade,s+i+10,0.15),promo=vary(r.promo,s+i+20,0.15),oi=vary(r.oi,s+i+30,0.10);
     const net=parseFloat((list+trade+promo+oi).toFixed(2)),real=parseFloat(((net/list)*100).toFixed(1));
@@ -246,7 +304,7 @@ function PriceWaterfallTable({ filters }) {
   });
   const th={padding:"8px 10px",textAlign:"left",fontSize:9,fontFamily:"'MarsBold',system-ui",color:"#8b8fb8",textTransform:"uppercase",letterSpacing:".06em",background:"#f8f8fc",borderBottom:"2px solid #e8e8f4",whiteSpace:"nowrap"};
   const td={padding:"9px 10px",fontSize:12,borderBottom:"1px solid #f0f0f8"};
-  return (
+  return(
     <div style={{overflowX:"auto"}}>
       <table style={{width:"100%",borderCollapse:"collapse"}}>
         <thead><tr>{["Brand","List Price","Trade Allow.","Promo Disc.","OI Deduct.","Net Price","Realization %","vs Target","Action"].map(h=><th key={h} style={th}>{h}</th>)}</tr></thead>
@@ -286,31 +344,11 @@ export default function PricingAndPack() {
     <div style={{ flex:1, display:"flex", flexDirection:"column", background:"#f0f2f8", overflow:"hidden", minWidth:0, minHeight:0 }}>
 
       {/* Modals */}
-      {expanded === "matrix" && (
-        <Modal title="Price Elasticity Matrix — Brand × Channel" subtitle={`Log-log regression model · ${sub}`} onClose={() => setExpanded(null)}>
-          <ElasticityMatrix filters={filters}/>
-        </Modal>
-      )}
-      {expanded === "simulator" && (
-        <Modal title="Price Simulator" subtitle="Model revenue & margin impact" onClose={() => setExpanded(null)}>
-          <div style={{ maxWidth:500, margin:"0 auto" }}><PriceSimulator filters={filters}/></div>
-        </Modal>
-      )}
-      {expanded === "demand" && (
-        <Modal title="Demand Curve — Snickers" subtitle={`Price vs Volume · ${sub}`} onClose={() => setExpanded(null)}>
-          <ChartBox height={460}>{(w,h) => <DemandCurveChart filters={filters} w={w} h={h}/>}</ChartBox>
-        </Modal>
-      )}
-      {expanded === "comp" && (
-        <Modal title="Competitive Price Positioning" subtitle={`Current price vs competitors · ${sub}`} onClose={() => setExpanded(null)}>
-          <ChartBox height={460}>{(w,h) => <CompPriceChart filters={filters} w={w} h={h}/>}</ChartBox>
-        </Modal>
-      )}
-      {expanded === "waterfall" && (
-        <Modal title="Price-Pack-Channel Waterfall" subtitle={`List to Net price realization · ${sub}`} onClose={() => setExpanded(null)}>
-          <PriceWaterfallTable filters={filters}/>
-        </Modal>
-      )}
+      {expanded==="matrix"    && <Modal title="Price Elasticity Matrix — Brand × Channel" subtitle={`Log-log regression model · ${sub}`} onClose={()=>setExpanded(null)}><ElasticityMatrix filters={filters}/></Modal>}
+      {expanded==="simulator" && <Modal title="Price Simulator" subtitle="Model revenue & margin impact" onClose={()=>setExpanded(null)}><div style={{maxWidth:500,margin:"0 auto"}}><PriceSimulator filters={filters}/></div></Modal>}
+      {expanded==="demand"    && <Modal title="Demand Curve — Snickers" subtitle={`Price vs Volume · ${sub}`} onClose={()=>setExpanded(null)}><ChartBox height={460}>{(w,h)=><DemandCurveChart filters={filters} w={w} h={h}/>}</ChartBox></Modal>}
+      {expanded==="comp"      && <Modal title="Competitive Price Positioning" subtitle={`Current price vs competitors · ${sub}`} onClose={()=>setExpanded(null)}><ChartBox height={460}>{(w,h)=><CompPriceChart filters={filters} w={w} h={h}/>}</ChartBox></Modal>}
+      {expanded==="waterfall" && <Modal title="Price-Pack-Channel Waterfall" subtitle={`List to Net price realization · ${sub}`} onClose={()=>setExpanded(null)}><PriceWaterfallTable filters={filters}/></Modal>}
 
       {/* Page header */}
       <div style={{ padding:"14px 20px 0", flexShrink:0 }}>
@@ -334,11 +372,11 @@ export default function PricingAndPack() {
         {/* Row 1: Elasticity Matrix + Simulator */}
         <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr", gap:14 }}>
           <Card style={{ padding:"16px 18px" }}>
-            <CardHeader title="Price Elasticity Matrix — Brand × Channel" sub="Log-log regression model · Last 52 weeks · Click cell for detail" onExpand={() => setExpanded("matrix")} />
+            <CardHeader title="Price Elasticity Matrix — Brand × Channel" sub="Log-log regression model · Last 52 weeks · Click cell for detail" onExpand={()=>setExpanded("matrix")}/>
             <ElasticityMatrix filters={filters}/>
           </Card>
           <Card style={{ padding:"16px 18px" }}>
-            <CardHeader title="Price Simulator" sub="Model revenue & margin impact" onExpand={() => setExpanded("simulator")} />
+            <CardHeader title="Price Simulator" sub="Model revenue & margin impact" onExpand={()=>setExpanded("simulator")}/>
             <PriceSimulator filters={filters}/>
           </Card>
         </div>
@@ -346,18 +384,18 @@ export default function PricingAndPack() {
         {/* Row 2: Demand Curve + Competitive Price */}
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
           <Card style={{ padding:"16px 18px" }}>
-            <CardHeader title="Demand Curve — Snickers" sub="Price vs Volume · Log-log model fit" onExpand={() => setExpanded("demand")} />
-            <ChartBox height={210}>{(w,h) => <DemandCurveChart filters={filters} w={w} h={h}/>}</ChartBox>
+            <CardHeader title="Demand Curve — Snickers" sub="Price vs Volume · Log-log model fit" onExpand={()=>setExpanded("demand")}/>
+            <ChartBox height={210}>{(w,h)=><DemandCurveChart filters={filters} w={w} h={h}/>}</ChartBox>
           </Card>
           <Card style={{ padding:"16px 18px" }}>
-            <CardHeader title="Competitive Price Positioning" sub="Current price vs competitors · Mass Channel" onExpand={() => setExpanded("comp")} />
-            <ChartBox height={210}>{(w,h) => <CompPriceChart filters={filters} w={w} h={h}/>}</ChartBox>
+            <CardHeader title="Competitive Price Positioning" sub="Current price vs competitors · Mass Channel" onExpand={()=>setExpanded("comp")}/>
+            <ChartBox height={210}>{(w,h)=><CompPriceChart filters={filters} w={w} h={h}/>}</ChartBox>
           </Card>
         </div>
 
         {/* Row 3: Waterfall table */}
         <Card style={{ padding:"16px 18px" }}>
-          <CardHeader title="Price-Pack-Channel Waterfall" sub="List to Net price realization by brand" onExpand={() => setExpanded("waterfall")} />
+          <CardHeader title="Net Price Realization" sub="List to Net price realization by brand" onExpand={()=>setExpanded("waterfall")}/>
           <PriceWaterfallTable filters={filters}/>
         </Card>
 

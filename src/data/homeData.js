@@ -11,39 +11,41 @@ const vary = (base, seed, range = 0.12) =>
 
 // ─── KPI DATA ─────────────────────────────────────────────────────────────────
 export const getKPIs = (filters) => {
-  const s = hash(`kpi-${filters.Market}-${filters.Category}-${filters.SKU}-${filters.Period}-${filters.Year}`);
+  const s = hash(`kpi-${filters.Market}-${filters.Category}-${filters.SubCategory}-${filters.SKU}-${filters.Period}-${filters.Year}-${filters.Retailer}`);
   const chg = (seed) => parseFloat(((sr(seed) - 0.4) * 8).toFixed(1));
   return [
-    { id: "rev",   label: "Net Revenue",       value: `$${vary(142.5, s+1, 0.18)}M`, change: chg(s+10), color: "#5500bb" },
-    { id: "gm",    label: "Gross Margin %",    value: `${vary(41.2, s+2, 0.10)}%`,   change: chg(s+11), color: "#5500bb" },
-    { id: "asp",   label: "Avg Selling Price", value: `$${vary(4.99, s+3, 0.08)}`,   change: chg(s+12), color: "#5500bb" },
-    { id: "units", label: "Units Sold",         value: `${vary(28.6, s+4, 0.15)}M`,   change: chg(s+13), color: "#5500bb" },
-    { id: "promo", label: "Promo Sales %",      value: `${vary(28.0, s+5, 0.14)}%`,   change: chg(s+14), color: "#5500bb" },
-    { id: "pr",    label: "Price Realization",  value: `${vary(94.2, s+6, 0.08)}%`,   change: chg(s+15), color: "#5500bb" },
+    { id: "rev",   label: "Net Revenue",       value: `$${vary(142.5, s+1, 0.30)}M`, change: chg(s+10), color: "#5500bb" },
+    { id: "gm",    label: "Gross Margin %",    value: `${vary(41.2, s+2, 0.20)}%`,   change: chg(s+11), color: "#5500bb" },
+    { id: "asp",   label: "Avg Selling Price", value: `$${vary(4.99, s+3, 0.18)}`,   change: chg(s+12), color: "#5500bb" },
+    { id: "units", label: "Units Sold",         value: `${vary(28.6, s+4, 0.28)}M`,   change: chg(s+13), color: "#5500bb" },
+    { id: "promo", label: "Promo Sales %",      value: `${vary(28.0, s+5, 0.25)}%`,   change: chg(s+14), color: "#5500bb" },
+    { id: "pr",    label: "Price Realization",  value: `${vary(94.2, s+6, 0.18)}%`,   change: chg(s+15), color: "#5500bb" },
   ];
 };
 
 // ─── CATEGORY TABLE ───────────────────────────────────────────────────────────
 const CATS = ["Chocolate", "Pet Care", "Gum & Mints", "Rice & Sauces"];
 export const getCategoryTable = (filters) => {
-  const s = hash(`cat-${filters.Market}-${filters.Year}-${filters.Period}`);
+  const s = hash(`cat-${filters.Market}-${filters.Year}-${filters.Period}-${filters.Region}-${filters.Retailer}`);
   return CATS.map((cat, i) => ({
     cat,
-    rev:    `$${vary(38.5 - i * 4, s + i, 0.20)}M`,
-    growth: parseFloat(((sr(s + i + 10) - 0.38) * 14).toFixed(1)),
-    units:  `${vary(7.2 - i * 0.8, s + i + 20, 0.18)}M`,
-    margin: `${vary(40 - i * 2, s + i + 30, 0.10)}%`,
+    rev:    `$${vary(38.5 - i * 4, s + i,      0.35)}M`,
+    growth: parseFloat(((sr(s + i + 10) - 0.38) * 22).toFixed(1)),
+    units:  `${vary(7.2  - i * 0.8, s + i + 20, 0.32)}M`,
+    margin: `${vary(40   - i * 2,   s + i + 30, 0.18)}%`,
   }));
 };
 
 // ─── TREND CHART ──────────────────────────────────────────────────────────────
 export const getTrendData = (filters) => {
-  const s = hash(`trend-${filters.Market}-${filters.Year}-${filters.Period}`);
+  const s    = hash(`trend-${filters.Market}-${filters.Year}-${filters.Period}-${filters.Region}-${filters.Category}`);
+  const base = 8.0 + sr(s) * 6.0;   // 8-14M base revenue varies by market
+  const pBase= 4.0 + sr(s+1) * 2.5; // 4-6.5 base price varies by market
   return Array.from({ length: 13 }, (_, i) => ({
     period: `P${i + 1}`,
-    rev:    parseFloat(vary(10.5 + Math.sin(i * 0.5) * 1.5, s + i,       0.12).toFixed(2)),
-    price:  parseFloat(vary(4.85 + i * 0.01,                s + i + 50,  0.04).toFixed(2)),
-    vol:    parseFloat(vary(2.1  - i * 0.02,                s + i + 100, 0.10).toFixed(2)),
+    rev:    parseFloat(vary(base   + Math.sin(i * 0.5) * 2.0, s + i,       0.18).toFixed(2)),
+    price:  parseFloat(vary(pBase  + i * 0.02,                s + i + 50,  0.08).toFixed(2)),
+    vol:    parseFloat(vary(2.1    - i * 0.02,                s + i + 100, 0.18).toFixed(2)),
   }));
 };
 
