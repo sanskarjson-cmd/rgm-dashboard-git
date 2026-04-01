@@ -4,12 +4,12 @@ import { FilterProvider }        from "./context/FilterContext";
 import LoginPage      from "./pages/LoginPage";
 import HomePage       from "./pages/HomePage";
 import PricingAndPack from "./pages/PricingAndPack";
-import PromotionsPage from "./pages/PromotionsPage";
+import PromotionsPage from "./pages/Promotionspage";
 import Navbar         from "./components/Navbar";
 import SideNav        from "./components/SideNav";
 import TradeTermsPage     from "./pages/Tradetermspage";
-import AssortmentMixPage      from "./pages/AssortmentMixPage";
-import SkuRationalizationPage from "./pages/SkuRationalizationPage";
+import AssortmentMixPage      from "./pages/Assortmentmixpage";
+import SkuRationalizationPage from "./pages/Skurationalizationpage";
 import { PERSONA_CONFIG } from "./data/mockData";
 
 function UnderConstruction({ page }) {
