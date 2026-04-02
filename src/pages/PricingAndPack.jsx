@@ -254,22 +254,87 @@ function PriceSimulator({ filters }) {
   );
 }
 
-// ─── DEMAND CURVE ─────────────────────────────────────────────────────────────
+// ─── DEMAND CURVE — FULLY FILTER-SYNCED ──────────────────────────────────────
+// Per-brand config: price range, base volume, elasticity
+const BRAND_CURVE_CONFIG = {
+  Snickers:  { priceMin:1.09, priceMax:2.29, priceStep:0.12, baseVol:180, elasticity:-1.86, defaultCur:1.79 },
+  "M&M's":   { priceMin:1.19, priceMax:2.39, priceStep:0.12, baseVol:160, elasticity:-1.94, defaultCur:1.89 },
+  Twix:      { priceMin:1.19, priceMax:2.39, priceStep:0.12, baseVol:150, elasticity:-2.08, defaultCur:1.89 },
+  Skittles:  { priceMin:0.99, priceMax:2.09, priceStep:0.11, baseVol:170, elasticity:-1.71, defaultCur:1.59 },
+  Starburst: { priceMin:0.99, priceMax:2.09, priceStep:0.11, baseVol:155, elasticity:-1.64, defaultCur:1.59 },
+};
+
+// Detect brand from SKU name
+function detectBrandFromSKU(sku) {
+  const s = (sku || "").toLowerCase();
+  if (s.includes("snickers"))  return "Snickers";
+  if (s.includes("m&m") || s.includes("mms") || s.includes("m&ms")) return "M&M's";
+  if (s.includes("twix"))      return "Twix";
+  if (s.includes("skittles"))  return "Skittles";
+  if (s.includes("starburst")) return "Starburst";
+  return "Snickers"; // fallback
+}
+
 function DemandCurveChart({ filters, w, h }) {
-  const s=hash(`demand-${filters.Market}-${filters.Period}-${filters.Year}`);
-  const e=-(1.7+sr(s)*0.4), base=vary(180,s+1,0.20), cur=vary(1.79,s+2,0.06);
-  const prices=[1.19,1.29,1.39,1.49,1.59,1.69,1.79,1.89,1.99,2.09,2.19];
-  const data=prices.map(p=>({price:p,vol:Math.round(base*Math.pow(cur/p,Math.abs(e))),isCurrent:Math.abs(p-cur)<0.05}));
-  return(
-    <LineChart width={w} height={h} data={data} margin={{top:10,right:20,left:0,bottom:20}}>
+  // Detect brand from SKU filter
+  const brand  = detectBrandFromSKU(filters.SKU);
+  const cfg    = BRAND_CURVE_CONFIG[brand] || BRAND_CURVE_CONFIG.Snickers;
+
+  // Build seeded hash from ALL relevant filters
+  const s = hash(`demand-${brand}-${filters.Market}-${filters.Period}-${filters.Year}-${filters.Retailer}-${filters.Category}`);
+
+  // Vary base volume by market + retailer
+  const baseVol = vary(cfg.baseVol, s+1, 0.22);
+
+  // Vary current price slightly by market/period
+  const cur = parseFloat(vary(cfg.defaultCur, s+2, 0.06).toFixed(2));
+
+  // Period shifts elasticity slightly (seasonal demand sensitivity)
+  const periodIdx   = parseInt((filters.Period || "P1").replace("P","")) || 1;
+  const periodShift = 1.0 + (periodIdx - 7) * 0.008; // P7 = neutral; Q4 periods more elastic
+  const e           = parseFloat((cfg.elasticity * periodShift * vary(1, s+3, 0.06)).toFixed(3));
+
+  // Build price array from brand config
+  const steps  = Math.round((cfg.priceMax - cfg.priceMin) / cfg.priceStep);
+  const prices = Array.from({ length: steps + 1 }, (_, i) =>
+    parseFloat((cfg.priceMin + i * cfg.priceStep).toFixed(2))
+  );
+
+  const data = prices.map(p => ({
+    price:     p,
+    vol:       Math.round(baseVol * Math.pow(cur / p, Math.abs(e))),
+    isCurrent: Math.abs(p - cur) < cfg.priceStep * 0.6,
+  }));
+
+  return (
+    <LineChart width={w} height={h} data={data} margin={{ top:10, right:20, left:0, bottom:20 }}>
       <CartesianGrid strokeDasharray="4 4" stroke="#ebebf4"/>
-      <XAxis dataKey="price" tickFormatter={v=>`$${v}`} tick={{fontSize:10,fill:"#8b8fb8"}} axisLine={{stroke:"#e0e0f0"}} tickLine={false} label={{value:"Price ($)",position:"insideBottom",offset:-10,fontSize:10,fill:"#8b8fb8"}}/>
-      <YAxis tick={{fontSize:10,fill:"#8b8fb8"}} axisLine={false} tickLine={false} label={{value:"Volume (K units)",angle:-90,position:"insideLeft",offset:14,fontSize:10,fill:"#8b8fb8"}}/>
-      <Tooltip formatter={(v)=>[v.toLocaleString()+" K","Volume"]} contentStyle={{fontSize:12,borderRadius:8}}/>
-      <ReferenceLine x={cur} stroke={MARS.red} strokeDasharray="5 3" label={{value:"Current",position:"top",fontSize:9,fill:MARS.red}}/>
-      <Line type="monotone" dataKey="vol" stroke={MARS.red} strokeWidth={2.5} dot={(p)=>{const{cx,cy,payload:pl}=p;if(pl.isCurrent)return<circle key="c" cx={cx} cy={cy} r={6} fill={MARS.red} stroke="#fff" strokeWidth={2}/>;return<g key={`g${pl.price}`}/>;}}/>
+      <XAxis dataKey="price" tickFormatter={v=>`$${v}`} tick={{ fontSize:10, fill:"#8b8fb8" }} axisLine={{ stroke:"#e0e0f0" }} tickLine={false}
+        label={{ value:"Price ($)", position:"insideBottom", offset:-10, fontSize:10, fill:"#8b8fb8" }}/>
+      <YAxis tick={{ fontSize:10, fill:"#8b8fb8" }} axisLine={false} tickLine={false}
+        label={{ value:"Volume (K units)", angle:-90, position:"insideLeft", offset:14, fontSize:10, fill:"#8b8fb8" }}/>
+      <Tooltip
+        formatter={(v) => [v.toLocaleString() + " K", "Volume"]}
+        contentStyle={{ fontSize:12, borderRadius:8 }}
+        labelFormatter={v => `Price: $${v}`}
+      />
+      <ReferenceLine x={cur} stroke={MARS.red} strokeDasharray="5 3"
+        label={{ value:`$${cur} (Current)`, position:"top", fontSize:9, fill:MARS.red }}/>
+      <Line type="monotone" dataKey="vol" stroke={MARS.red} strokeWidth={2.5}
+        dot={(p) => {
+          const { cx, cy, payload:pl } = p;
+          if (pl.isCurrent) return <circle key="c" cx={cx} cy={cy} r={6} fill={MARS.red} stroke="#fff" strokeWidth={2}/>;
+          return <g key={`g${pl.price}`}/>;
+        }}/>
     </LineChart>
   );
+}
+
+// Helper to build the dynamic demand curve title
+function demandCurveTitle(filters) {
+  const brand = detectBrandFromSKU(filters.SKU);
+  const sku   = filters.SKU || brand;
+  return `Demand Curve · ${sku} · ${filters.Market}`;
 }
 
 // ─── COMPETITIVE PRICE CHART ──────────────────────────────────────────────────
@@ -340,15 +405,19 @@ export default function PricingAndPack() {
     { label:"Revenue Opportunity",   value:`+$${Math.round(vary(34,s+5,0.25))}M`, changeLabel:"From price optim.", sub:"If elasticity model applied", change:1 },
   ];
 
+  // Dynamic demand curve title
+  const dcTitle = demandCurveTitle(filters);
+  const dcSubtitle = `Price vs Volume · ${detectBrandFromSKU(filters.SKU)} · Log-log model · ${sub}`;
+
   return (
     <div style={{ flex:1, display:"flex", flexDirection:"column", background:"#f0f2f8", overflow:"hidden", minWidth:0, minHeight:0 }}>
 
       {/* Modals */}
       {expanded==="matrix"    && <Modal title="Price Elasticity Matrix — Brand × Channel" subtitle={`Log-log regression model · ${sub}`} onClose={()=>setExpanded(null)}><ElasticityMatrix filters={filters}/></Modal>}
       {expanded==="simulator" && <Modal title="Price Simulator" subtitle="Model revenue & margin impact" onClose={()=>setExpanded(null)}><div style={{maxWidth:500,margin:"0 auto"}}><PriceSimulator filters={filters}/></div></Modal>}
-      {expanded==="demand"    && <Modal title="Demand Curve — Snickers" subtitle={`Price vs Volume · ${sub}`} onClose={()=>setExpanded(null)}><ChartBox height={460}>{(w,h)=><DemandCurveChart filters={filters} w={w} h={h}/>}</ChartBox></Modal>}
+      {expanded==="demand"    && <Modal title={dcTitle} subtitle={dcSubtitle} onClose={()=>setExpanded(null)}><ChartBox height={460}>{(w,h)=><DemandCurveChart filters={filters} w={w} h={h}/>}</ChartBox></Modal>}
       {expanded==="comp"      && <Modal title="Competitive Price Positioning" subtitle={`Current price vs competitors · ${sub}`} onClose={()=>setExpanded(null)}><ChartBox height={460}>{(w,h)=><CompPriceChart filters={filters} w={w} h={h}/>}</ChartBox></Modal>}
-      {expanded==="waterfall" && <Modal title="Price-Pack-Channel Waterfall" subtitle={`List to Net price realization · ${sub}`} onClose={()=>setExpanded(null)}><PriceWaterfallTable filters={filters}/></Modal>}
+      {expanded==="waterfall" && <Modal title="Net Price Realization" subtitle={`List to Net price realization · ${sub}`} onClose={()=>setExpanded(null)}><PriceWaterfallTable filters={filters}/></Modal>}
 
       {/* Page header */}
       <div style={{ padding:"14px 20px 0", flexShrink:0 }}>
@@ -381,10 +450,14 @@ export default function PricingAndPack() {
           </Card>
         </div>
 
-        {/* Row 2: Demand Curve + Competitive Price */}
+        {/* Row 2: Demand Curve (dynamic title) + Competitive Price */}
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
           <Card style={{ padding:"16px 18px" }}>
-            <CardHeader title="Demand Curve — Snickers" sub="Price vs Volume · Log-log model fit" onExpand={()=>setExpanded("demand")}/>
+            <CardHeader
+              title={dcTitle}
+              sub={`Elasticity ${BRAND_CURVE_CONFIG[detectBrandFromSKU(filters.SKU)]?.elasticity ?? -1.86} · ${filters.Period} ${filters.Year}`}
+              onExpand={()=>setExpanded("demand")}
+            />
             <ChartBox height={210}>{(w,h)=><DemandCurveChart filters={filters} w={w} h={h}/>}</ChartBox>
           </Card>
           <Card style={{ padding:"16px 18px" }}>
